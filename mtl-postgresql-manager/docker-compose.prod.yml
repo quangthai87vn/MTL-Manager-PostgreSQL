@@ -40,7 +40,7 @@ services:
       - "com.mtl.description=PostgreSQL 18 Database Server"
 
   manager:
-    image: ${DOCKERHUB_IMAGE:-quangthai87vn/mtl-postgresql-manager}:${IMAGE_TAG:-latest}
+    image: ${DOCKERHUB_IMAGE:-quangthai87/mtl-postgresql-manager}:${IMAGE_TAG:-latest}
     container_name: mtl-manager-postgresql
     depends_on:
       postgres:
