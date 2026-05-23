@@ -1,0 +1,98 @@
+version: '3.8'
+
+# =============================================================================
+# MTL PostgreSQL Manager - Production Docker Compose
+# =============================================================================
+# Dùng để deploy từ Docker Hub trên máy Linux hoặc server
+#
+# Cách sử dụng:
+#   cp .env.example .env
+#   # Chỉnh sửa .env với password bảo mật
+#   docker-compose -f docker-compose.prod.yml up -d
+#
+# Lưu ý:
+#   - postgres và pgadmin dùng images public từ Docker Hub
+#   - manager image được push lên Docker Hub trước đó
+# =============================================================================
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: mtl-postgresql
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_EXTERNAL_PORT:-7000}:5432"
+    networks:
+      - mtl-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "com.mtl.description=PostgreSQL 18 Database Server"
+
+  manager:
+    image: ${DOCKERHUB_IMAGE:-quangthai87vn/mtl-postgresql-manager}:${IMAGE_TAG:-latest}
+    container_name: mtl-manager-postgresql
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: file:/data/mtl-manager.db
+      POSTGRES_HOST: mtl-postgresql
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      SESSION_SECRET: ${SESSION_SECRET}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:7001}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+    volumes:
+      - ./data/sqlite:/data
+      - ./backups:/backups
+    ports:
+      - "${MANAGER_EXTERNAL_PORT:-7001}:3000"
+    networks:
+      - mtl-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.mtl.description=MTL PostgreSQL Manager Web Application"
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: mtl-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+    volumes:
+      - ./data/pgadmin:/var/lib/pgadmin
+    ports:
+      - "${PGADMIN_EXTERNAL_PORT:-7002}:80"
+    networks:
+      - mtl-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    labels:
+      - "com.mtl.description=pgAdmin4 - PostgreSQL Administration Tool"
+
+networks:
+  mtl-network:
+    driver: bridge

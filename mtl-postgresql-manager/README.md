@@ -50,8 +50,9 @@ mtl-postgresql-manager/
 │   ├── sqlite/                  # SQLite database (MTL Manager)
 │   └── pgadmin/                 # pgAdmin4 config
 ├── backups/                     # Backup files
-├── Dockerfile                   # Docker image build
-├── docker-compose.yml           # Docker Compose configuration
+├── Dockerfile                   # Docker image build (dùng cho dev)
+├── docker-compose.yml           # Development - build local
+├── docker-compose.prod.yml      # Production - pull từ Docker Hub
 ├── package.json                 # Node.js dependencies
 ├── next.config.js               # Next.js config
 ├── tailwind.config.ts           # Tailwind CSS config
@@ -162,59 +163,91 @@ docker run -d \
 
 ## 5. Cách chạy bằng Docker Compose
 
-### Build và start tất cả containers
+### 5.1 Development - `docker-compose.yml`
+
+Dùng khi **phát triển** (có source code, muốn build local):
 
 ```bash
-cd mtl-postgresql-manager
+# Khởi động (build image từ local Dockerfile)
 docker-compose up -d
-```
 
-### Build lại image trước khi start
-
-```bash
+# Build lại image sau khi thay đổi code
 docker-compose up -d --build
-```
 
-### Xem trạng thái containers
-
-```bash
-docker-compose ps
-```
-
-### Xem logs
-
-```bash
-# Logs tất cả containers
+# Xem logs
 docker-compose logs -f
 
-# Logs container cụ thể
-docker-compose logs -f manager
-docker-compose logs -f postgres
-docker-compose logs -f pgadmin
-```
-
-### Stop containers
-
-```bash
-docker-compose stop
-```
-
-### Stop và xóa containers
-
-```bash
+# Dừng
 docker-compose down
 ```
 
-### Stop và xóa containers cùng volumes (XÓA HẾT DỮ LIỆU)
+**Đặc điểm:**
+- Manager image được **build từ local Dockerfile**
+- Phù hợp để develop và test thay đổi
+- Image chưa được push lên Docker Hub
+
+### 5.2 Production - `docker-compose.prod.yml`
+
+Dùng khi **deploy** trên server hoặc máy khác (không có source code):
 
 ```bash
-docker-compose down -v
+# 1. Pull image từ Docker Hub (trên máy đã push trước đó)
+docker-compose -f docker-compose.prod.yml build manager
+docker tag mtl-postgresql-manager-manager:latest quangthai87vn/mtl-postgresql-manager:latest
+docker push quangthai87vn/mtl-postgresql-manager:latest
+
+# 2. Trên máy Linux/Server:
+# Tạo .env với password bảo mật
+cp .env.example .env
+nano .env  # Chỉnh sửa password
+
+# 3. Khởi động (pull images từ Docker Hub)
+docker-compose -f docker-compose.prod.yml up -d
+
+# 4. Kiểm tra
+docker-compose -f docker-compose.prod.yml ps
+
+# 5. Xem logs
+docker-compose -f docker-compose.prod.yml logs -f
 ```
 
-### Restart containers
+**Đặc điểm:**
+- Manager image được **pull từ Docker Hub**
+- postgres và pgadmin dùng images public
+- Không cần source code, chỉ cần `docker-compose.prod.yml` và `.env`
+- Phù hợp để deploy trên Linux server
+
+### So sánh Development vs Production
+
+| | `docker-compose.yml` | `docker-compose.prod.yml` |
+|--|--|--|
+| Mục đích | Phát triển (Development) | Deploy (Production) |
+| Manager image | Build từ local Dockerfile | Pull từ Docker Hub |
+| postgres | postgres:18-alpine | postgres:18-alpine |
+| pgadmin | dpage/pgadmin4 | dpage/pgadmin4 |
+| Cần source code | ✅ Có | ❌ Không |
+
+### Các lệnh Docker Compose chung
 
 ```bash
+# Xem trạng thái containers
+docker-compose ps
+
+# Stop containers
+docker-compose stop
+
+# Stop và xóa containers
+docker-compose down
+
+# Stop và xóa containers cùng volumes (XÓA HẾT DỮ LIỆU)
+docker-compose down -v
+
+# Restart
 docker-compose restart
+
+# Xem logs container cụ thể
+docker-compose logs -f manager
+docker-compose logs -f postgres
 ```
 
 ## 6. Tài khoản mặc định
@@ -328,7 +361,75 @@ mtl-postgresql-manager/
 - **"Connection refused"**: PostgreSQL chưa khởi động xong, đợi vài giây rồi thử lại
 - **"Password authentication failed"**: Sai password, kiểm tra `POSTGRES_PASSWORD` trong `.env`
 
-## 9. Quy trình update source
+## 9. Docker Hub - Push và Pull Images
+
+### 9.1 Push image lên Docker Hub (Development Machine)
+
+Chỉ cần push **1 image duy nhất** - `manager`:
+
+```bash
+# 1. Build image manager
+docker-compose build manager
+
+# 2. Tag image cho Docker Hub
+docker tag mtl-postgresql-manager-manager:latest quangthai87vn/mtl-postgresql-manager:latest
+
+# 3. Login Docker Hub
+docker login
+
+# 4. Push lên Docker Hub
+docker push quangthai87vn/mtl-postgresql-manager:latest
+```
+
+**Giải thích:**
+| Container | Image | Nguồn | Cần push? |
+|-----------|-------|--------|----------|
+| `postgres` | postgres:18-alpine | Docker Hub chính thức | ❌ Không |
+| `pgadmin` | dpage/pgadmin4:latest | Docker Hub chính thức | ❌ Không |
+| `manager` | Build từ Dockerfile | Image tự tạo | ✅ **Có** |
+
+### 9.2 Pull và chạy trên Linux/Server (Production)
+
+```bash
+# 1. Cài đặt Docker
+sudo apt update && sudo apt install docker.io docker-compose -y
+
+# 2. Tạo thư mục
+mkdir -p ~/mtl-postgresql-manager
+cd ~/mtl-postgresql-manager
+
+# 3. Tải docker-compose.prod.yml
+curl -O https://raw.githubusercontent.com/quangthai87vn/MTL-Manager-PostgreSQL/main/mtl-postgresql-manager/docker-compose.prod.yml
+
+# 4. Tạo file .env với password bảo mật
+cat > .env << 'EOF'
+POSTGRES_PASSWORD=your_secure_password
+SESSION_SECRET=your_secure_session_secret
+ADMIN_USERNAME=admin@example.com
+ADMIN_PASSWORD=your_secure_password
+PGADMIN_DEFAULT_EMAIL=admin@example.com
+PGADMIN_PASSWORD=your_secure_password
+NEXT_PUBLIC_APP_URL=http://localhost:7001
+DOCKERHUB_IMAGE=quangthai87vn/mtl-postgresql-manager
+IMAGE_TAG=latest
+EOF
+
+# 5. Khởi động
+docker-compose -f docker-compose.prod.yml up -d
+
+# 6. Kiểm tra
+docker-compose -f docker-compose.prod.yml ps
+```
+
+### 9.3 Truy cập các dịch vụ
+
+| Service | URL |
+|---------|-----|
+| MTL Manager | http://localhost:7001 |
+| pgAdmin4 | http://localhost:7002 |
+| PostgreSQL | localhost:7000 |
+
+## 11. Quy trình update source
 
 ### Khi có thay đổi code
 
@@ -371,7 +472,7 @@ rm -rf data/
 docker-compose up -d --build
 ```
 
-## 10. Quy trình commit Git
+## 12. Quy trình commit Git
 
 ### Kiểm tra thay đổi
 
@@ -426,7 +527,7 @@ git merge feat/add-new-feature
 git push origin main
 ```
 
-## 11. Các lỗi thường gặp
+## 13. Các lỗi thường gặp
 
 ### pgAdmin không kết nối PostgreSQL
 
