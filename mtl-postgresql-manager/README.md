@@ -193,8 +193,8 @@ Dùng khi **deploy** trên server hoặc máy khác (không có source code):
 ```bash
 # 1. Pull image từ Docker Hub (trên máy đã push trước đó)
 docker-compose -f docker-compose.prod.yml build manager
-docker tag mtl-postgresql-manager-manager:latest quangthai87vn/mtl-postgresql-manager:latest
-docker push quangthai87vn/mtl-postgresql-manager:latest
+docker tag mtl-postgresql-manager-manager:latest quangthai87/mtl-postgresql-manager:latest
+docker push quangthai87/mtl-postgresql-manager:latest
 
 # 2. Trên máy Linux/Server:
 # Tạo .env với password bảo mật
@@ -372,13 +372,13 @@ Chỉ cần push **1 image duy nhất** - `manager`:
 docker-compose build manager
 
 # 2. Tag image cho Docker Hub
-docker tag mtl-postgresql-manager-manager:latest quangthai87vn/mtl-postgresql-manager:latest
+docker tag mtl-postgresql-manager-manager:latest quangthai87/mtl-postgresql-manager:latest
 
 # 3. Login Docker Hub
 docker login
 
 # 4. Push lên Docker Hub
-docker push quangthai87vn/mtl-postgresql-manager:latest
+docker push quangthai87/mtl-postgresql-manager:latest
 ```
 
 **Giải thích:**
@@ -399,7 +399,7 @@ mkdir -p ~/mtl-postgresql-manager
 cd ~/mtl-postgresql-manager
 
 # 3. Tải docker-compose.prod.yml
-curl -O https://raw.githubusercontent.com/quangthai87vn/MTL-Manager-PostgreSQL/main/mtl-postgresql-manager/docker-compose.prod.yml
+curl -O https://raw.githubusercontent.com/quangthai87/MTL-Manager-PostgreSQL/main/mtl-postgresql-manager/docker-compose.prod.yml
 
 # 4. Tạo file .env với password bảo mật
 cat > .env << 'EOF'
@@ -410,7 +410,7 @@ ADMIN_PASSWORD=your_secure_password
 PGADMIN_DEFAULT_EMAIL=admin@example.com
 PGADMIN_PASSWORD=your_secure_password
 NEXT_PUBLIC_APP_URL=http://localhost:7001
-DOCKERHUB_IMAGE=quangthai87vn/mtl-postgresql-manager
+DOCKERHUB_IMAGE=quangthai87/mtl-postgresql-manager
 IMAGE_TAG=latest
 EOF
 
