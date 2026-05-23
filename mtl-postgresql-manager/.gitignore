@@ -1,0 +1,26 @@
+node_modules
+.next
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+
+# Data directories (keep .gitkeep)
+data/
+backups/
+data/sqlite/*.db
+data/postgres/*
+!backups/.gitkeep
+!data/sqlite/.gitkeep
+!data/postgres/.gitkeep
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.dump
+*.backup
+*.sql.bak

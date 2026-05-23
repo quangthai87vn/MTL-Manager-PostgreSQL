@@ -1,0 +1,83 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: mtl-postgresql
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+      POSTGRES_DB: postgres
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    ports:
+      - "7000:5432"
+    networks:
+      - mtl-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  manager:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mtl-manager-postgresql
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: file:/data/mtl-manager.db
+      POSTGRES_HOST: mtl-postgresql
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+      POSTGRES_DB: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+      SESSION_SECRET: ${SESSION_SECRET:-mtl_manager_secret}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:7001}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+    volumes:
+      - ./data/sqlite:/data
+      - ./backups:/backups
+    ports:
+      - "7001:3000"
+    networks:
+      - mtl-network
+    restart: unless-stopped
+    user: root
+    command: >
+      sh -c "
+        chmod -R 777 /data 2>/dev/null || true &&
+        if [ ! -f /data/mtl-manager.db ]; then
+          echo 'Initializing database...'
+          npx prisma db push
+          node scripts/seed.js
+        fi &&
+        chown -R nextjs:nodejs /data
+        exec node server.js
+      "
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: mtl-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@mtl.vn}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+    volumes:
+      - ./data/pgadmin:/var/lib/pgadmin
+    ports:
+      - "7002:80"
+    networks:
+      - mtl-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  mtl-network:
+    driver: bridge

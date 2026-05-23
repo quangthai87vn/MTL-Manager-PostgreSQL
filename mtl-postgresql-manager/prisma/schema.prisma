@@ -1,0 +1,71 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model AdminUser {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  sessions     Session[]
+  auditLogs    AuditLog[]
+  backupLogs   BackupLog[]
+  restoreLogs  RestoreLog[]
+}
+
+model Session {
+  id        String    @id @default(uuid())
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  user      AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  target    String
+  details   String?
+  ipAddress String?
+  userId    String?
+  createdAt DateTime @default(now())
+  user      AdminUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model BackupLog {
+  id           String   @id @default(uuid())
+  filename     String
+  databaseName String
+  fileSize     BigInt
+  status      String
+  errorMessage String?
+  userId      String?
+  createdAt   DateTime @default(now())
+  user        AdminUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model RestoreLog {
+  id              String   @id @default(uuid())
+  filename        String
+  sourceDatabase  String
+  targetDatabase  String
+  mode            String
+  status          String
+  errorMessage    String?
+  userId          String?
+  createdAt       DateTime @default(now())
+  user            AdminUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
