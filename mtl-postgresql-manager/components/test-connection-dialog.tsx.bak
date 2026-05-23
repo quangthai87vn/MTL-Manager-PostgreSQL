@@ -1,0 +1,189 @@
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useToast } from "@/components/ui/use-toast";
+import { Database, Wifi, WifiOff } from "lucide-react";
+
+interface TestConnectionDialogProps {
+  defaultDatabase?: string;
+  defaultUsername?: string;
+  trigger?: React.ReactNode;
+}
+
+export function TestConnectionDialog({
+  defaultDatabase = "",
+  defaultUsername = "",
+  trigger,
+}: TestConnectionDialogProps) {
+  const [open, setOpen] = useState(false);
+  const [username, setUsername] = useState(defaultUsername);
+  const [password, setPassword] = useState("");
+  const [database, setDatabase] = useState(defaultDatabase);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{
+    success: boolean;
+    message: string;
+    version?: string;
+  } | null>(null);
+
+  const { toast } = useToast();
+
+  const handleTest = async () => {
+    if (!username || !password || !database) {
+      toast({
+        title: "Lỗi",
+        description: "Vui lòng nhập đầy đủ thông tin",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    setResult(null);
+
+    try {
+      const res = await fetch("/api/connections/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password, database }),
+      });
+
+      const data = await res.json();
+      setResult(data);
+
+      if (data.success) {
+        toast({
+          title: "Thành công",
+          description: `Kết nối ${database} thành công!`,
+        });
+      } else {
+        toast({
+          title: "Thất bại",
+          description: data.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      setResult({
+        success: false,
+        message: "Đã xảy ra lỗi khi kết nối",
+      });
+      toast({
+        title: "Lỗi",
+        description: "Đã xảy ra lỗi khi kết nối",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {trigger || (
+          <Button variant="outline" size="sm">
+            <Wifi className="w-4 h-4 mr-2" />
+            Test kết nối
+          </Button>
+        )}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Database className="w-5 h-5" />
+            Test kết nối Database
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="username">Username</Label>
+            <Input
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Nhập username"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Nhập password"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="database">Database</Label>
+            <Input
+              id="database"
+              value={database}
+              onChange={(e) => setDatabase(e.target.value)}
+              placeholder="Nhập tên database"
+            />
+          </div>
+
+          {result && (
+            <div
+              className={`p-4 rounded-lg ${
+                result.success
+                  ? "bg-green-50 border border-green-200"
+                  : "bg-red-50 border border-red-200"
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                {result.success ? (
+                  <Wifi className="w-5 h-5 text-green-600" />
+                ) : (
+                  <WifiOff className="w-5 h-5 text-red-600" />
+                )}
+                <span
+                  className={`font-medium ${
+                    result.success ? "text-green-700" : "text-red-700"
+                  }`}
+                >
+                  {result.success ? "Kết nối thành công" : "Kết nối thất bại"}
+                </span>
+              </div>
+              <p
+                className={`text-sm ${
+                  result.success ? "text-green-600" : "text-red-600"
+                }`}
+              >
+                {result.message}
+              </p>
+              {result.version && (
+                <p className="text-sm text-green-600 mt-1">
+                  Server: {result.version.split(" ")[0]} {result.version.split(" ")[1]}
+                </p>
+              )}
+            </div>
+          )}
+
+          <Button
+            onClick={handleTest}
+            disabled={loading}
+            className="w-full"
+          >
+            {loading ? "Đang kiểm tra..." : "Kiểm tra kết nối"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

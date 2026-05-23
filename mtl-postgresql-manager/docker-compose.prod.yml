@@ -42,6 +42,7 @@ services:
   manager:
     image: ${DOCKERHUB_IMAGE:-quangthai87/mtl-postgresql-manager}:${IMAGE_TAG:-latest}
     container_name: mtl-manager-postgresql
+    platform: linux/amd64
     depends_on:
       postgres:
         condition: service_healthy
