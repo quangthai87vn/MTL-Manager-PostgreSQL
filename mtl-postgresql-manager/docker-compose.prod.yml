@@ -78,7 +78,6 @@ services:
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: mtl-pgadmin
-    user: "${PUID:-5050}:${PGID:-5050}"
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
