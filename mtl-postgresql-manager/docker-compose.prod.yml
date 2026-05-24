@@ -20,9 +20,9 @@ services:
     image: postgres:18-alpine
     container_name: mtl-postgresql
     environment:
-      POSTGRES_USER: postgres
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
@@ -47,15 +47,15 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: file:/data/mtl-manager.db
-      POSTGRES_HOST: mtl-postgresql
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: postgres
+      DATABASE_URL: ${DATABASE_URL}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
       PGPASSWORD: ${POSTGRES_PASSWORD}
       SESSION_SECRET: ${SESSION_SECRET}
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:7001}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
     volumes:

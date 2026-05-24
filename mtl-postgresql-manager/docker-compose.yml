@@ -3,14 +3,14 @@ services:
     image: postgres:18-alpine
     container_name: mtl-postgresql
     environment:
-      POSTGRES_USER: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
-      POSTGRES_DB: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
     ports:
-      - "7000:5432"
+      - "${POSTGRES_EXTERNAL_PORT:-7000}:5432"
     networks:
       - mtl-network
     restart: unless-stopped
@@ -29,22 +29,22 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: file:/data/mtl-manager.db
-      POSTGRES_HOST: mtl-postgresql
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: postgres
+      DATABASE_URL: ${DATABASE_URL:-file:/data/mtl-manager.db}
+      POSTGRES_HOST: ${POSTGRES_HOST:-mtl-postgresql}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
-      POSTGRES_DB: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
       PGPASSWORD: ${POSTGRES_PASSWORD:-postgres123}
-      SESSION_SECRET: ${SESSION_SECRET:-mtl_manager_secret}
+      SESSION_SECRET: ${SESSION_SECRET:-change_this_secret}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:7001}
-      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change_this_password}
     volumes:
       - ./data/sqlite:/data
       - ./backups:/backups
     ports:
-      - "7001:3000"
+      - "${MANAGER_EXTERNAL_PORT:-7001}:3000"
     networks:
       - mtl-network
     restart: unless-stopped
@@ -65,12 +65,12 @@ services:
     image: dpage/pgadmin4:latest
     container_name: mtl-pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@mtl.vn}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-change_this_password}
     volumes:
       - ./data/pgadmin:/var/lib/pgadmin
     ports:
-      - "7002:80"
+      - "${PGADMIN_EXTERNAL_PORT:-7002}:80"
     networks:
       - mtl-network
     depends_on:
