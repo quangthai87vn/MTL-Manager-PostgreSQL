@@ -4,7 +4,13 @@ node_modules
 .next
 out
 data
+backups
 *.log
+.env
 .env*.local
+.env*.prod
 .vscode
 .idea
+*.db
+*.sqlite
+*.dump
